@@ -1,0 +1,11 @@
+detectron2.egg==info
+Django==4.1.7
+numpy==1.24.1
+numpy==1.21.5
+opencv_python==4.7.0.72
+pdf2jpg==1.1
+Pillow==9.3.0
+Pillow==9.5.0
+pytesseract==0.3.10
+torch==2.0.0+cpu
+torchvision==0.15.1+cpu

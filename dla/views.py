@@ -23,6 +23,8 @@ from django.http import JsonResponse
 import pytesseract
 from django.core.files.storage import FileSystemStorage 
 from pdf2jpg import pdf2jpg
+from PIL import Image
+import uuid
 
 # def get_board_dicts(imgdir,js_file):
 #     json_file = imgdir+"/" + js_file #Fetch the json file
@@ -137,8 +139,13 @@ def index(request):
                 temp["page"]=count
                 temp["bbox"]=bbox
                 temp["class"]=class_name
-                if class_name in ["Picture","Table","Formula","Caption"]:
-                    temp["ndarray"]=crop_im.tolist()
+                if class_name in ["Picture","Table","Formula"]:
+                    data=Image.fromarray(crop_im)
+                    imagePath=uuid.uuid4().hex+".png"
+                    fileLocation=os.path.join(BASE_DIR,"media","images",imagePath)
+                    data.save(fileLocation)
+                    temp["location"]="/media/images/"+imagePath
+                    print(temp["location"])
                     l.append(temp)
                     continue
                 else:

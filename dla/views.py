@@ -94,6 +94,27 @@ def convertPdf(file):
    outputpath = os.path.join(BASE_DIR,"media")
    result = pdf2jpg.convert_pdf2jpg(inputpath,outputpath, pages="ALL")
 
+def readingOrder(l):
+    newList_sortx=sorted(l,key=lambda x:x['bbox'][0])
+    # for item in newList_sortx:
+    #     print(item['bbox'])
+    newList_sorty=[]
+    startIndex=0
+    endIndex=1
+    curValue=newList_sortx[0]['bbox'][0]
+    x=newList_sortx[1:]
+    for item in x:
+        diff=abs(curValue-item['bbox'][0])
+        if diff<=200:
+            endIndex=endIndex+1
+        else:
+            newList_sorty[startIndex:endIndex]=sorted(newList_sortx[startIndex:endIndex],key=lambda z:z['bbox'][1])
+            startIndex=endIndex
+            endIndex=endIndex+1
+            curValue=item['bbox'][0]
+    newList_sorty[startIndex:endIndex]=sorted(newList_sortx[startIndex:endIndex],key=lambda z:z['bbox'][1])
+    return newList_sorty
+
 def index(request):
     BASE_DIR = Path(__file__).resolve().parent.parent
     if request.method=="POST":
@@ -110,6 +131,8 @@ def index(request):
        path=os.path.join(BASE_DIR,"media",file.name+"_dir")
        count=1
        print(len(os.listdir(path)))
+       start=0
+       end=0
        for index in range(len(os.listdir(path))):
             image=os.path.join(path,str(index)+"_"+file.name+".jpg")
             im = cv2.imread(image)
@@ -151,9 +174,19 @@ def index(request):
                 else:
                     temp["content"]=pytesseract.image_to_string(img_rgb,config="--psm 6")[:-1]
                 l.append(temp)
+            end=len(l)
+            tempList=l[start:end]
+            orderedList=readingOrder(tempList)
+            l[start:end]=orderedList
+            start=end
             count=count+1
         #  context={'uploaded_file':"/media/"+file.name,'jsonData':l}
+    
     context={'jsonData':l}
+    # j=json.dumps(l)
+    # jsonFile=open("temp_result.json","w")
+    # jsonFile.write(j)
+    # jsonFile.close()
     #    print("List:",l)
     # #    print(l[0].content)
     return render(request,'index.html',context)

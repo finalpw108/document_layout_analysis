@@ -1,4 +1,4 @@
 from django.contrib import admin
-from .models import DataUpload
+from .models import UsersDataUpload
 
-admin.site.register(DataUpload)
+admin.site.register(UsersDataUpload)

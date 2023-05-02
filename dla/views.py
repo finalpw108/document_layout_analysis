@@ -25,6 +25,11 @@ from django.core.files.storage import FileSystemStorage
 from pdf2jpg import pdf2jpg
 from PIL import Image
 import uuid
+from django.shortcuts import render,redirect
+from django.contrib.auth.models import User
+from django.contrib import auth
+from .models import UsersDataUpload
+from django.core.files.base import File
 
 # def get_board_dicts(imgdir,js_file):
 #     json_file = imgdir+"/" + js_file #Fetch the json file
@@ -90,7 +95,8 @@ def home(request):
 
 def convertPdf(file):
    BASE_DIR = Path(__file__).resolve().parent.parent
-   inputpath = os.path.join(BASE_DIR,"media",file)
+   inputpath = os.path.join(BASE_DIR,"media","pdf",file)
+   print(inputpath)
    outputpath = os.path.join(BASE_DIR,"media")
    result = pdf2jpg.convert_pdf2jpg(inputpath,outputpath, pages="ALL")
 
@@ -119,22 +125,29 @@ def index(request):
     BASE_DIR = Path(__file__).resolve().parent.parent
     if request.method=="POST":
     #    email=request.POST.get("email")
-       file=request.FILES["file"]
-       fs=FileSystemStorage()
-       fileName=fs.save(file.name,file)
-       convertPdf(file.name)
+       fileNew=request.FILES["file"]
+    #    fs=FileSystemStorage()
+    #    fileName=fs.save(fileNew.name,fileNew)
+    #    user=request.user
+    #    print(user)
+       userData=UsersDataUpload(username=request.user,file=fileNew)
+       userData.save()
+       fileName=userData.file.name[4:]
+       print(fileName)
+       convertPdf(fileName)
     #    uploadedFileUrl=fs.url(fileName)
        cfg=set_cfg()
     #    print("cfg set")
        l=[]
        predictor = DefaultPredictor(cfg)
-       path=os.path.join(BASE_DIR,"media",file.name+"_dir")
+       path=os.path.join(BASE_DIR,"media",fileName+"_dir")
+       print(path)
        count=1
        print(len(os.listdir(path)))
        start=0
        end=0
        for index in range(len(os.listdir(path))):
-            image=os.path.join(path,str(index)+"_"+file.name+".jpg")
+            image=os.path.join(path,str(index)+"_"+fileName+".jpg")
             im = cv2.imread(image)
             outputs = predictor(im)
             instances=outputs["instances"]
@@ -183,13 +196,65 @@ def index(request):
         #  context={'uploaded_file':"/media/"+file.name,'jsonData':l}
     
     context={'jsonData':l}
-    # j=json.dumps(l)
-    # jsonFile=open("temp_result.json","w")
-    # jsonFile.write(j)
-    # jsonFile.close()
-    #    print("List:",l)
-    # #    print(l[0].content)
+    j=json.dumps(l)
+    path=os.path.join(BASE_DIR,"media","json",fileName.split(".")[0]+".json")
+    jsonFile=open(path,"w")
+    jsonFile.write(j)
+    jsonFile.close()
+    curObject=UsersDataUpload.objects.get(id=userData.id)
+    curObject.json=fileName.split(".")[0]+".json"
+    curObject.save()
     return render(request,'index.html',context)
+
+def signup(request):
+    if request.method == "POST":
+        if request.POST['password1'] == request.POST['password2']:
+            try:
+                User.objects.get(username = request.POST['username'])
+                return render (request,'signup.html', {'error':'Username is already taken!'})
+            except User.DoesNotExist:
+                user = User.objects.create_user(request.POST['username'],email=request.POST['email'],password=request.POST['password1'])
+                auth.login(request,user)
+                # return redirect('/dla/home/')
+                return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+        else:
+            return render (request,'signup.html', {'error':'Password does not match!'})
+    else:
+        return render(request,'signup.html')
+
+def login(request):
+    # user = User.objects.get(username=request.user)
+    # print("User:",user)
+    if request.method == 'POST':
+        user = auth.authenticate(username=request.POST['username'],password = request.POST['password'])
+        if user is not None:
+            auth.login(request,user)
+            # return redirect('/dla/home/')
+            return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+        else:
+            return render (request,'login.html', {'error':'Username or password is incorrect!'})
+    else:
+        return render(request,'login.html')
+
+def logout(request):
+    # if request.method == 'POST':
+    auth.logout(request)
+    # return redirect('/dla/home/')
+    return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+
+# UsersDataUpload.objects.all().filter(username="jahnavi")[0].file.name
+
+def dashboard(request):
+    user=request.user
+    userData=UsersDataUpload.objects.all().filter(username=user)
+    sendUserData=[]
+    for i in range(len(userData)):
+        pdf=userData[i].file.name[4:]
+        sendUserData.append({'pdf':pdf,'json':userData[i].json})
+    context={'userData':sendUserData}
+    return render (request,'dashboard.html',context)
+
+    
 
 # def document_layout_analysis(request):
 #    for d in ["train","val","test"]:

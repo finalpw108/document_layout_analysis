@@ -30,6 +30,16 @@ from django.contrib.auth.models import User
 from django.contrib import auth
 from .models import UsersDataUpload
 from django.core.files.base import File
+import environ
+from datetime import datetime,timedelta
+import jwt
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+env=environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
+JWT_SECRET = env('JWT_SECRET')
+JWT_ALGORITHM = env('JWT_ALGORITHM')
+JWT_EXP = env('JWT_EXP')
 
 # def get_board_dicts(imgdir,js_file):
 #     json_file = imgdir+"/" + js_file #Fetch the json file
@@ -91,7 +101,11 @@ def crop(bbox, in_img: np.ndarray):
   return cropped_im
 
 def home(request):
-   return render(request,'home.html')
+   if 'user' in request.COOKIES.keys():
+       context={'authenticated':True}
+   else:
+       context={'authenticated':False}
+   return render(request,'home.html',context)
 
 def convertPdf(file):
    BASE_DIR = Path(__file__).resolve().parent.parent
@@ -124,7 +138,7 @@ def readingOrder(l):
 def index(request):
     BASE_DIR = Path(__file__).resolve().parent.parent
     if request.method=="POST":
-    #    email=request.POST.get("email")
+       #    email=request.POST.get("email")
        fileNew=request.FILES["file"]
     #    fs=FileSystemStorage()
     #    fileName=fs.save(fileNew.name,fileNew)
@@ -194,17 +208,19 @@ def index(request):
             start=end
             count=count+1
         #  context={'uploaded_file':"/media/"+file.name,'jsonData':l}
-    
-    context={'jsonData':l}
-    j=json.dumps(l)
-    path=os.path.join(BASE_DIR,"media","json",fileName.split(".")[0]+".json")
-    jsonFile=open(path,"w")
-    jsonFile.write(j)
-    jsonFile.close()
-    curObject=UsersDataUpload.objects.get(id=userData.id)
-    curObject.json=fileName.split(".")[0]+".json"
-    curObject.save()
-    return render(request,'index.html',context)
+       context={'jsonData':l}
+       j=json.dumps(l)
+       path=os.path.join(BASE_DIR,"media","json",fileName.split(".")[0]+".json")
+       jsonFile=open(path,"w")
+       jsonFile.write(j)
+       jsonFile.close()
+       curObject=UsersDataUpload.objects.get(id=userData.id)
+       curObject.json=fileName.split(".")[0]+".json"
+       curObject.save()
+       return render(request,'index.html',context)
+
+    else:
+        return redirect('/dla/home/')
 
 def signup(request):
     if request.method == "POST":
@@ -214,13 +230,26 @@ def signup(request):
                 return render (request,'signup.html', {'error':'Username is already taken!'})
             except User.DoesNotExist:
                 user = User.objects.create_user(request.POST['username'],email=request.POST['email'],password=request.POST['password1'])
+                # response=render (request,'home.html', {'authenticated':request.user.is_authenticated})
+                response=redirect('/dla/home/')
+                userInfo = request.POST['username']
+                payload={
+                    'username':userInfo,
+                    'exp':datetime.utcnow()+timedelta(seconds=int(JWT_EXP))
+                }
+                jwtToken=jwt.encode(payload,JWT_SECRET,JWT_ALGORITHM)
+                response.set_cookie('user',jwtToken,max_age=int(JWT_EXP))
                 auth.login(request,user)
                 # return redirect('/dla/home/')
-                return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+                return response
         else:
             return render (request,'signup.html', {'error':'Password does not match!'})
     else:
-        return render(request,'signup.html')
+        if 'user' in request.COOKIES.keys():
+            return redirect('/dla/home/')
+        else:
+            return render(request,'signup.html')
+            # return redirect('/dla/signup/')
 
 def login(request):
     # user = User.objects.get(username=request.user)
@@ -228,31 +257,51 @@ def login(request):
     if request.method == 'POST':
         user = auth.authenticate(username=request.POST['username'],password = request.POST['password'])
         if user is not None:
+            response=redirect('/dla/home/')
+            userInfo = request.POST['username']
+            payload={
+                'username':userInfo,
+                'exp':datetime.utcnow()+timedelta(seconds=int(JWT_EXP))
+            }
+            jwtToken=jwt.encode(payload,JWT_SECRET,JWT_ALGORITHM)
+            response.set_cookie('user',jwtToken,max_age=int(JWT_EXP))
             auth.login(request,user)
-            # return redirect('/dla/home/')
-            return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+            return response
+            # return render (request,'home.html', {'authenticated':request.user.is_authenticated})
         else:
             return render (request,'login.html', {'error':'Username or password is incorrect!'})
     else:
-        return render(request,'login.html')
+        if 'user' in request.COOKIES.keys():
+            return redirect('/dla/home/')
+        else:
+            # print("Hello")
+            # return redirect('/dla/login/')
+            return render(request,'login.html')
 
 def logout(request):
     # if request.method == 'POST':
     auth.logout(request)
-    # return redirect('/dla/home/')
-    return render (request,'home.html', {'authenticated':request.user.is_authenticated})
+    response=redirect('/dla/home/')
+    response.delete_cookie('user')
+    return response
+    # return render (request,'home.html', {'authenticated':request.user.is_authenticated})
 
 # UsersDataUpload.objects.all().filter(username="jahnavi")[0].file.name
 
 def dashboard(request):
-    user=request.user
-    userData=UsersDataUpload.objects.all().filter(username=user)
-    sendUserData=[]
-    for i in range(len(userData)):
-        pdf=userData[i].file.name[4:]
-        sendUserData.append({'pdf':pdf,'json':userData[i].json})
-    context={'userData':sendUserData}
-    return render (request,'dashboard.html',context)
+    if 'user' in request.COOKIES.keys():
+        user=request.user
+        userData=UsersDataUpload.objects.all().filter(username=user)
+        sendUserData=[]
+        for i in range(len(userData)):
+            pdf=userData[i].file.name[4:]
+            sendUserData.append({'pdf':pdf,'json':userData[i].json})
+        context={'userData':sendUserData}
+        return render (request,'dashboard.html',context)
+    else:
+        # print("Hello")
+        # return redirect('/dla/login/')
+        return redirect('/dla/home/')
 
     
 

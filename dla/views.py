@@ -26,6 +26,7 @@ from pdf2jpg import pdf2jpg
 from PIL import Image
 import uuid
 from django.shortcuts import render,redirect
+from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 from django.contrib import auth
 from .models import UsersDataUpload
@@ -214,10 +215,18 @@ def index(request):
        jsonFile=open(path,"w")
        jsonFile.write(j)
        jsonFile.close()
+       html=render_to_string('index.html',context,request)
+    #    print(html)
+       pathHtml=os.path.join(BASE_DIR,"media","html",fileName.split(".")[0]+".html")
+       htmlFile=open(pathHtml,"w")
+       htmlFile.write(html)
+       htmlFile.close()
        curObject=UsersDataUpload.objects.get(id=userData.id)
        curObject.json=fileName.split(".")[0]+".json"
+       curObject.html=fileName.split(".")[0]+".html"
        curObject.save()
-       return render(request,'index.html',context)
+       return HttpResponse(html)
+    #    return render(request,'index.html',context)
 
     else:
         return redirect('/dla/home/')
@@ -295,7 +304,7 @@ def dashboard(request):
         sendUserData=[]
         for i in range(len(userData)):
             pdf=userData[i].file.name[4:]
-            sendUserData.append({'pdf':pdf,'json':userData[i].json})
+            sendUserData.append({'pdf':pdf,'json':userData[i].json,'html':userData[i].html})
         context={'userData':sendUserData}
         return render (request,'dashboard.html',context)
     else:

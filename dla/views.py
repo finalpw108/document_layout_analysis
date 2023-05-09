@@ -34,6 +34,7 @@ from django.core.files.base import File
 import environ
 from datetime import datetime,timedelta
 import jwt
+import bisect
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env=environ.Env()
@@ -136,6 +137,21 @@ def readingOrder(l):
     newList_sorty[startIndex:endIndex]=sorted(newList_sortx[startIndex:endIndex],key=lambda z:z['bbox'][1])
     return newList_sorty
 
+def sectionPages(request,jsonFile,id):
+    jsonFileName=jsonFile+".json"
+    path=os.path.join(BASE_DIR,"media","json",jsonFileName)
+    file=open(path)
+    data=json.load(file)
+    firstIdx=bisect.bisect_left(data,id,key=lambda x:x['page'])
+    lastIdx=bisect.bisect_right(data,id,key=lambda x:x['page'])
+    print(firstIdx,lastIdx)
+    if firstIdx==lastIdx:
+        id=1
+        return redirect(f"/dla/sectionPages/{jsonFile}/{id}/")
+    else:
+        res=data[firstIdx:lastIdx]
+        return render(request,'temp.html',{'data':res,'id':id,'jsonFile':jsonFile})
+
 def index(request):
     BASE_DIR = Path(__file__).resolve().parent.parent
     if request.method=="POST":
@@ -225,7 +241,10 @@ def index(request):
        curObject.json=fileName.split(".")[0]+".json"
        curObject.html=fileName.split(".")[0]+".html"
        curObject.save()
-       return HttpResponse(html)
+    #    return HttpResponse(html)
+       id=1
+       jsonFile=fileName.split(".")[0]
+       return redirect(f"/dla/sectionPages/{jsonFile}/{id}/")
     #    return render(request,'index.html',context)
 
     else:

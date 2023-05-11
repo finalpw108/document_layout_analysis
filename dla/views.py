@@ -107,7 +107,8 @@ def home(request):
        context={'authenticated':True}
    else:
        context={'authenticated':False}
-   return render(request,'home.html',context)
+   context_json=json.dumps(context)
+   return render(request,'home.html',{"auth":context,"auth_json":context_json})
 
 def convertPdf(file):
    BASE_DIR = Path(__file__).resolve().parent.parent

@@ -151,7 +151,7 @@ def sectionPages(request,jsonFile,id):
         return redirect(f"/dla/sectionPages/{jsonFile}/{id}/")
     else:
         res=data[firstIdx:lastIdx]
-        return render(request,'temp.html',{'data':res,'id':id,'jsonFile':jsonFile})
+        return render(request,'index.html',{'data':res,'id':id,'jsonFile':jsonFile})
 
 def index(request):
     BASE_DIR = Path(__file__).resolve().parent.parent
@@ -253,26 +253,43 @@ def index(request):
 
 def signup(request):
     if request.method == "POST":
-        if request.POST['password1'] == request.POST['password2']:
-            try:
-                User.objects.get(username = request.POST['username'])
-                return render (request,'signup.html', {'error':'Username is already taken!'})
-            except User.DoesNotExist:
-                user = User.objects.create_user(request.POST['username'],email=request.POST['email'],password=request.POST['password1'])
-                # response=render (request,'home.html', {'authenticated':request.user.is_authenticated})
-                response=redirect('/dla/home/')
-                userInfo = request.POST['username']
-                payload={
-                    'username':userInfo,
-                    'exp':datetime.utcnow()+timedelta(seconds=int(JWT_EXP))
-                }
-                jwtToken=jwt.encode(payload,JWT_SECRET,JWT_ALGORITHM)
-                response.set_cookie('user',jwtToken,max_age=int(JWT_EXP))
-                auth.login(request,user)
-                # return redirect('/dla/home/')
-                return response
-        else:
-            return render (request,'signup.html', {'error':'Password does not match!'})
+        try:
+            User.objects.get(username = request.POST['username'])
+            return render (request,'signup.html', {'error':'Username is already taken!'})
+        except User.DoesNotExist:
+            user = User.objects.create_user(request.POST['username'],email=request.POST['email'],password=request.POST['password1'])
+            # response=render (request,'home.html', {'authenticated':request.user.is_authenticated})
+            response=redirect('/dla/home/')
+            userInfo = request.POST['username']
+            payload={
+                'username':userInfo,
+                'exp':datetime.utcnow()+timedelta(seconds=int(JWT_EXP))
+            }
+            jwtToken=jwt.encode(payload,JWT_SECRET,JWT_ALGORITHM)
+            response.set_cookie('user',jwtToken,max_age=int(JWT_EXP))
+            auth.login(request,user)
+            # return redirect('/dla/home/')
+            return response
+        # if request.POST['password1'] == request.POST['password2']:
+        #     try:
+        #         User.objects.get(username = request.POST['username'])
+        #         return render (request,'signup.html', {'error':'Username is already taken!'})
+        #     except User.DoesNotExist:
+        #         user = User.objects.create_user(request.POST['username'],email=request.POST['email'],password=request.POST['password1'])
+        #         # response=render (request,'home.html', {'authenticated':request.user.is_authenticated})
+        #         response=redirect('/dla/home/')
+        #         userInfo = request.POST['username']
+        #         payload={
+        #             'username':userInfo,
+        #             'exp':datetime.utcnow()+timedelta(seconds=int(JWT_EXP))
+        #         }
+        #         jwtToken=jwt.encode(payload,JWT_SECRET,JWT_ALGORITHM)
+        #         response.set_cookie('user',jwtToken,max_age=int(JWT_EXP))
+        #         auth.login(request,user)
+        #         # return redirect('/dla/home/')
+        #         return response
+        # else:
+        #     return render (request,'signup.html', {'error':'Password does not match!'})
     else:
         if 'user' in request.COOKIES.keys():
             return redirect('/dla/home/')

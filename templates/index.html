@@ -30,7 +30,7 @@ print(output) {% endcomment %}
         {% comment %} <h1>This is index page</h1> {% endcomment %}
         {% comment %} Page-footer is skipped as of now {% endcomment %} 
         {% comment %} <img src={{uploaded_file}} alt="Dectections on the image"> {% endcomment %}
-        {% for item in jsonData %}
+        {% for item in data %}
             {% if item.class == "Title" %}
                 <h2 style="text-align:justify;">{{item.content}}</h2>
             {% endif %}
@@ -51,7 +51,10 @@ print(output) {% endcomment %}
             {% endif %}
             <br/>
         {% endfor %}
+        <div class="container" style="display:flex;justify-content:space-between;">
+            <a href="/dla/sectionPages/{{jsonFile}}/{{id|add:"-1"}}/" class="btn btn-primary btn-block btn-lg" role="button" style="padding: 10px;border: 10px;font-size: 15px;margin-top: auto;margin-bottom: 20px;">Previous</a>
+            <a href="/dla/sectionPages/{{jsonFile}}/{{id|add:"+1"}}/" class="btn btn-primary btn-block btn-lg" role="button" style="padding: 10px;border: 10px;font-size: 15px;margin-top: auto;margin-bottom: 20px;">Next</a>
+        </div>
     </div>
 </body>
 </html>
-

@@ -341,7 +341,10 @@ def dashboard(request):
         sendUserData=[]
         for i in range(len(userData)):
             pdf=userData[i].file.name[4:]
-            sendUserData.append({'pdf':pdf,'json':userData[i].json,'html':userData[i].html})
+            jsonFile=userData[i].json.split(".")[0]
+            jpg="/media/"+pdf+"_dir/0_"+pdf+".jpg"
+            sendUserData.append({'pdf':pdf,'json':jsonFile,'html':userData[i].html,'jpg':jpg})
+            print(sendUserData)
         context={'userData':sendUserData}
         return render (request,'dashboard.html',context)
     else:
